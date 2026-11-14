@@ -136,7 +136,6 @@
       font-weight: 600;
     }
 
-    /* チケットの切り취り線と半円 */
     .ticket-divider {
       width: 2px;
       border-left: 2px dashed #e5e5ea;
@@ -400,17 +399,16 @@
   <div class="container">
     <header>
       <div>
-        <div class="date-badge" id="currentDateText">2026年11月</div>
+        <div class="date-badge" id="currentDateText"></div>
         <h1>マイチケット</h1>
       </div>
       <button class="icon-btn" id="toggleSimBtn" title="テスト・設定">⚙️</button>
     </header>
 
-    <!-- テスト用シミュレーターパネル（初期非表示・右上⚙️で開閉） -->
     <div class="panel hidden" id="simPanel">
       <h3>🛠️ 動作確認シミュレーター</h3>
       <p style="font-size:12px; color:var(--subtext); margin-top:0;">
-        日付や月を進めて、翌月の復活やボーナス繰り越し、1日1個制限の解除をテストできます。
+        日付や月を進めて、翌月の復活やボーナス繰り越し、1日1回の制限解除をテストできます。
       </p>
       <div class="sim-buttons">
         <button class="sim-btn" onclick="advanceDays(1)">📅 日付を +1日 進める</button>
@@ -425,14 +423,12 @@
       <span>今月使えるチケット</span>
       <span id="remainingSummary" style="font-size:12px; font-weight:600;"></span>
     </div>
-
     <div id="ticketContainer"></div>
 
     <!-- 運動カウンター -->
     <div class="section-title">
       <span>運動カウンター</span>
     </div>
-
     <div class="workout-card">
       <div class="workout-header">
         <div>
@@ -441,9 +437,7 @@
         </div>
         <div class="workout-counter-badge" id="workoutCounterBadge">0 個</div>
       </div>
-
       <div class="stamp-row" id="stampRow"></div>
-
       <button class="workout-btn" id="workoutBtn" onclick="recordWorkout()">
         💪 運動を1回カウントする
       </button>
@@ -462,26 +456,22 @@
   <script>
     const STORAGE_KEY = 'meal_ticket_app_v1';
 
-    // デフォルト状態
     function createInitialState(nowStr, monthStr) {
       return {
-        lastActiveMonth: monthStr,       // YYYY-MM
-        cheatTickets: 1,                 // 月1枚（繰越不可）
-        sweetMonthlyTickets: 4,          // 月4枚（繰越不可）
-        sweetCarryoverTickets: 0,        // 運動ボーナス分（繰越可）
-        sideTickets: 4,                  // おかず月4枚（繰越不可）
-        workoutProgress: 0,              // 0〜4（5でカウンター+1）
-        workoutCounterTotal: 0,          // 累計運動カウンター個数
-        lastCounterIncrementDate: null,  // YYYY-MM-DD（1日1個上限管理用）
-        virtualOffsetDays: 0,            // シミュレーター用オフセット日数
-        virtualOffsetMonths: 0,          // シミュレーター用オフセット月数
+        lastActiveMonth: monthStr,
+        cheatTickets: 1,
+        sweetMonthlyTickets: 4,
+        sweetCarryoverTickets: 0,
+        sideTickets: 4,
+        workoutProgress: 0,
+        workoutCounterTotal: 0,
+        lastWorkoutDate: null, // ← 運動の記録自体を1日1回に制限するためのプロパティ
+        virtualOffsetDays: 0,
+        virtualOffsetMonths: 0,
         history: []
       };
     }
 
-    let state = loadState();
-
-    // 現在の日付オブジェクト（シミュレーター対応）
     function getVirtualNow() {
       const d = new Date();
       if (state && state.virtualOffsetMonths) {
@@ -506,6 +496,8 @@
       return `${y}-${m}`;
     }
 
+    let state = loadState();
+
     function loadState() {
       const raw = localStorage.getItem(STORAGE_KEY);
       const now = new Date();
@@ -515,7 +507,12 @@
         return init;
       }
       try {
-        return JSON.parse(raw);
+        const loaded = JSON.parse(raw);
+        // 既存ユーザーのデータ移行用（新しいプロパティを追加）
+        if (loaded.lastWorkoutDate === undefined) {
+          loaded.lastWorkoutDate = loaded.lastCounterIncrementDate || null;
+        }
+        return loaded;
       } catch (e) {
         return createInitialState(formatDate(now), formatMonth(now));
       }
@@ -525,7 +522,6 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     }
 
-    // 月跨ぎ判定（月が変わっていたら基本チケットをリセット＆ボーナスチケットは維持）
     function checkMonthlyReset() {
       const now = getVirtualNow();
       const currentMonth = formatMonth(now);
@@ -534,7 +530,6 @@
         state.cheatTickets = 1;
         state.sweetMonthlyTickets = 4;
         state.sideTickets = 4;
-        // sweetCarryoverTickets（運動で増えたチケット）はそのまま繰り越し
         state.lastActiveMonth = currentMonth;
         addHistory(`🌙 ${now.getMonth() + 1}月になりチケットが復活しました！`);
         saveState();
@@ -546,15 +541,11 @@
       const now = getVirtualNow();
       const timeStr = `${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
       state.history.unshift({ time: timeStr, text });
-      if (state.history.length > 30) {
-        state.history.pop();
-      }
+      if (state.history.length > 30) state.history.pop();
     }
 
-    // チケット消費処理
     function useTicket(type) {
       checkMonthlyReset();
-
       if (type === 'cheat') {
         if (state.cheatTickets <= 0) return;
         if (!confirm('チートデイのチケットを使用しますか？\n（今月はもう表示されなくなります）')) return;
@@ -566,7 +557,6 @@
         if (totalSweet <= 0) return;
         if (!confirm('スイーツチケットを1枚使用しますか？')) return;
 
-        // 繰り越し不可の「今月分」から優先して消費する
         if (state.sweetMonthlyTickets > 0) {
           state.sweetMonthlyTickets -= 1;
           addHistory('🍰 スイーツチケット（今月枠）を1枚使用');
@@ -582,30 +572,27 @@
         addHistory('🍗 おかずチケットを1枚使用');
         showToast('おかずチケットを使用しました🍗');
       }
-
       saveState();
       render();
     }
 
-    // 運動記録処理
     function recordWorkout() {
       checkMonthlyReset();
       const todayStr = formatDate(getVirtualNow());
 
-      // すでに今日、運動カウンターが1個増えている場合、5回目の達成をブロック
-      const alreadyIncrementedToday = (state.lastCounterIncrementDate === todayStr);
-      if (alreadyIncrementedToday && state.workoutProgress >= 4) {
-        showToast('運動カウンターは1日1個までしか増えません🙏');
+      // 1日1回のスタンプ制限
+      if (state.lastWorkoutDate === todayStr) {
+        showToast('運動の記録は1日1回までです🙏');
         return;
       }
 
       state.workoutProgress += 1;
+      state.lastWorkoutDate = todayStr;
 
       if (state.workoutProgress >= 5) {
         state.workoutProgress = 0;
         state.workoutCounterTotal += 1;
         state.sweetCarryoverTickets += 1;
-        state.lastCounterIncrementDate = todayStr;
         addHistory('🏆 運動5回達成！カウンター+1 ＆ スイーツチケット+1枚獲得');
         showToast('🎉 運動5回達成！スイーツチケットを1枚獲得しました！');
       } else {
@@ -617,24 +604,18 @@
       render();
     }
 
-    // 画面描画
     function render() {
       checkMonthlyReset();
       const now = getVirtualNow();
-
-      // ヘッダー日付表示
       const isSimulated = state.virtualOffsetDays !== 0 || state.virtualOffsetMonths !== 0;
+      
       document.getElementById('currentDateText').textContent =
         `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日` + (isSimulated ? ' (テスト中)' : '');
 
-      // チケット描画（残数0のチケットは非表示）
       const container = document.getElementById('ticketContainer');
       container.innerHTML = '';
-
-      const totalSweet = state.sweetMonthlyTickets + state.sweetCarryoverTickets;
       let visibleCount = 0;
 
-      // 1. チートデイのチケット
       if (state.cheatTickets > 0) {
         visibleCount++;
         container.innerHTML += `
@@ -650,17 +631,15 @@
                 <h2 class="ticket-title">チートデイのチケット</h2>
                 <p class="ticket-desc">好きなものをたくさん食べる日に使用。使うと今月は非表示になり、来月1枚復活します。</p>
                 <div class="ticket-tags">
-                  <span class="tag">月1回限定</span>
-                  <span class="tag">翌月リセット</span>
+                  <span class="tag">月1回限定</span><span class="tag">翌月リセット</span>
                 </div>
               </div>
               <button class="use-btn" onclick="useTicket('cheat')">チケットを使う</button>
             </div>
-          </div>
-        `;
+          </div>`;
       }
 
-      // 2. スイーツチケット（今月分 + 運動ボーナス分）
+      const totalSweet = state.sweetMonthlyTickets + state.sweetCarryoverTickets;
       if (totalSweet > 0) {
         visibleCount++;
         container.innerHTML += `
@@ -682,11 +661,9 @@
               </div>
               <button class="use-btn" onclick="useTicket('sweet')">1枚使う</button>
             </div>
-          </div>
-        `;
+          </div>`;
       }
 
-      // 3. おかずチケット
       if (state.sideTickets > 0) {
         visibleCount++;
         container.innerHTML += `
@@ -702,14 +679,12 @@
                 <h2 class="ticket-title">おかずチケット</h2>
                 <p class="ticket-desc">1枚につき1つのおかずを購入可能。なくなると今月は非表示になり、来月4枚復活します。</p>
                 <div class="ticket-tags">
-                  <span class="tag">今月残り: ${state.sideTickets} / 4枚</span>
-                  <span class="tag">翌月リセット</span>
+                  <span class="tag">今月残り: ${state.sideTickets} / 4枚</span><span class="tag">翌月リセット</span>
                 </div>
               </div>
               <button class="use-btn" onclick="useTicket('side')">1枚使う</button>
             </div>
-          </div>
-        `;
+          </div>`;
       }
 
       if (visibleCount === 0) {
@@ -717,16 +692,11 @@
           <div class="empty-tickets">
             🎉 今月のチケットはすべて使い切りました！<br>
             来月になると復活します（または運動5回でスイーツチケットを獲得できます）。
-          </div>
-        `;
+          </div>`;
       }
 
-      document.getElementById('remainingSummary').textContent =
-        `表示中: ${visibleCount}種類`;
-
-      // 運動カウンター描画
-      document.getElementById('workoutCounterBadge').textContent =
-        `カウンター ${state.workoutCounterTotal}個`;
+      document.getElementById('remainingSummary').textContent = `表示中: ${visibleCount}種類`;
+      document.getElementById('workoutCounterBadge').textContent = `カウンター ${state.workoutCounterTotal}個`;
 
       const stampRow = document.getElementById('stampRow');
       stampRow.innerHTML = '';
@@ -736,29 +706,25 @@
           <div class="stamp-slot ${isDone ? 'active' : ''}">
             <div class="stamp-icon">${isDone ? '🔥' : (i === 5 ? '🍰' : '・')}</div>
             <div>${i}回目</div>
-          </div>
-        `;
+          </div>`;
       }
 
-      // 1日1個制限チェック
+      // 1日1回の記録制限チェック
       const todayStr = formatDate(now);
-      const alreadyIncrementedToday = (state.lastCounterIncrementDate === todayStr);
+      const alreadyWorkedOutToday = (state.lastWorkoutDate === todayStr);
       const workoutBtn = document.getElementById('workoutBtn');
       const workoutNote = document.getElementById('workoutNote');
 
-      if (alreadyIncrementedToday && state.workoutProgress >= 4) {
+      if (alreadyWorkedOutToday) {
         workoutBtn.disabled = true;
-        workoutBtn.textContent = '本日のカウンター増加上限（明日5回目を達成可能）';
-        workoutNote.textContent = '※運動カウンターは1日に1個までしか増えないため、5回目は明日以降カウントできます。';
+        workoutBtn.textContent = '本日の運動は記録済みです';
+        workoutNote.textContent = '※運動の記録は1日1回までです。明日また頑張りましょう！';
       } else {
         workoutBtn.disabled = false;
         workoutBtn.textContent = '💪 運動を1回カウントする';
-        workoutNote.textContent = alreadyIncrementedToday
-          ? '✅ 本日すでにカウンターが1個増えています（4回目までカウント可能）'
-          : `あと ${5 - state.workoutProgress} 回の運動でカウンター＋1個 ＆ スイーツチケット＋1枚！`;
+        workoutNote.textContent = `あと ${5 - state.workoutProgress} 回の運動でカウンター＋1個 ＆ スイーツチケット＋1枚！`;
       }
 
-      // 履歴描画
       const historyList = document.getElementById('historyList');
       if (state.history.length === 0) {
         historyList.innerHTML = '<li style="color:var(--subtext);">まだ履歴はありません</li>';
@@ -772,7 +738,6 @@
       }
     }
 
-    // シミュレーター用関数
     function advanceDays(days) {
       state.virtualOffsetDays += days;
       saveState();
@@ -820,7 +785,6 @@
       document.getElementById('simPanel').classList.toggle('hidden');
     });
 
-    // 初回描画
     render();
   </script>
 </body>
