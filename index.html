@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ご褒美チケット">
+  <title>食事＆ご褒美チケット管理</title>
+  <style>
+    :root {
+      --bg: #f2f2f7;
+      --card: #ffffff;
+      --text: #1c1c1e;
+      --subtext: #8e8e93;
+      --cheat-grad: linear-gradient(135deg, #ff5e3a 0%, #ff2a68 100%);
+      --sweet-grad: linear-gradient(135deg, #ff7eb3 0%, #ff758c 100%);
+      --side-grad: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);
+      --workout-grad: linear-gradient(135deg, #34c759 0%, #30b0c7 100%);
+      --accent: #007aff;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      padding-top: env(safe-area-inset-top, 20px);
+      padding-bottom: calc(env(safe-area-inset-bottom, 20px) + 40px);
+    }
+
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .date-badge {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--subtext);
+      text-transform: uppercase;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      margin: 2px 0 0 0;
+      letter-spacing: -0.5px;
+    }
+
+    .icon-btn {
+      background: var(--card);
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 18px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .section-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--subtext);
+      margin: 24px 0 12px 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* チケット風カード */
+    .ticket {
+      position: relative;
+      background: var(--card);
+      border-radius: 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+      display: flex;
+      overflow: hidden;
+      transition: transform 0.15s ease, opacity 0.25s ease;
+    }
+
+    .ticket:active {
+      transform: scale(0.98);
+    }
+
+    .ticket-left {
+      width: 88px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      padding: 16px 8px;
+      position: relative;
+    }
+
+    .ticket-cheat .ticket-left { background: var(--cheat-grad); }
+    .ticket-sweet .ticket-left { background: var(--sweet-grad); }
+    .ticket-side .ticket-left { background: var(--side-grad); }
+
+    .ticket-emoji {
+      font-size: 32px;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .ticket-count-num {
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .ticket-count-unit {
+      font-size: 11px;
+      opacity: 0.9;
+      font-weight: 600;
+    }
+
+    /* チケットの切り취り線と半円 */
+    .ticket-divider {
+      width: 2px;
+      border-left: 2px dashed #e5e5ea;
+      position: relative;
+      margin: 12px 0;
+    }
+
+    .ticket::before,
+    .ticket::after {
+      content: "";
+      position: absolute;
+      left: 79px;
+      width: 18px;
+      height: 18px;
+      background: var(--bg);
+      border-radius: 50%;
+      z-index: 2;
+    }
+
+    .ticket::before { top: -9px; }
+    .ticket::after { bottom: -9px; }
+
+    .ticket-right {
+      flex: 1;
+      padding: 16px 16px 16px 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .ticket-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin: 0 0 4px 0;
+    }
+
+    .ticket-desc {
+      font-size: 12px;
+      color: var(--subtext);
+      margin: 0 0 12px 0;
+      line-height: 1.4;
+    }
+
+    .ticket-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: #f2f2f7;
+      color: #3a3a3c;
+    }
+
+    .tag-carryover {
+      background: #fff0f6;
+      color: #d63384;
+    }
+
+    .use-btn {
+      align-self: flex-end;
+      background: var(--text);
+      color: #fff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .empty-tickets {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 32px 16px;
+      text-align: center;
+      color: var(--subtext);
+      font-size: 14px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    }
+
+    /* 運動カウンターカード */
+    .workout-card {
+      background: var(--card);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+    }
+
+    .workout-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .workout-counter-badge {
+      background: var(--workout-grad);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .stamp-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin: 18px 0;
+    }
+
+    .stamp-slot {
+      flex: 1;
+      aspect-ratio: 1;
+      border-radius: 14px;
+      background: #f2f2f7;
+      border: 2px dashed #d1d1d6;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--subtext);
+      transition: all 0.25s ease;
+    }
+
+    .stamp-slot.active {
+      background: #e8f8ed;
+      border: 2px solid #34c759;
+      color: #248a3d;
+      transform: scale(1.03);
+    }
+
+    .stamp-slot .stamp-icon {
+      font-size: 22px;
+      margin-bottom: 2px;
+    }
+
+    .workout-btn {
+      width: 100%;
+      background: var(--workout-grad);
+      color: #fff;
+      border: none;
+      padding: 14px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(52, 199, 89, 0.3);
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .workout-btn:active {
+      transform: scale(0.98);
+    }
+
+    .workout-btn:disabled {
+      background: #d1d1d6;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    .workout-note {
+      font-size: 12px;
+      color: var(--subtext);
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    /* 履歴・デバッグパネル */
+    .panel {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 16px;
+      margin-top: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+    }
+
+    .panel h3 {
+      margin: 0 0 12px 0;
+      font-size: 15px;
+    }
+
+    .sim-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .sim-btn {
+      background: #f2f2f7;
+      border: none;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .sim-btn.danger {
+      color: #ff3b30;
+    }
+
+    .history-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 180px;
+      overflow-y: auto;
+      font-size: 13px;
+    }
+
+    .history-list li {
+      padding: 8px 0;
+      border-bottom: 1px solid #f2f2f7;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .history-list li:last-child {
+      border-bottom: none;
+    }
+
+    /* トースト通知 */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(28, 28, 30, 0.92);
+      color: #fff;
+      padding: 12px 22px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      z-index: 1000;
+      transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      white-space: nowrap;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div>
+        <div class="date-badge" id="currentDateText">2026年11月</div>
+        <h1>マイチケット</h1>
+      </div>
+      <button class="icon-btn" id="toggleSimBtn" title="テスト・設定">⚙️</button>
+    </header>
+
+    <!-- テスト用シミュレーターパネル（初期非表示・右上⚙️で開閉） -->
+    <div class="panel hidden" id="simPanel">
+      <h3>🛠️ 動作確認シミュレーター</h3>
+      <p style="font-size:12px; color:var(--subtext); margin-top:0;">
+        日付や月を進めて、翌月の復活やボーナス繰り越し、1日1個制限の解除をテストできます。
+      </p>
+      <div class="sim-buttons">
+        <button class="sim-btn" onclick="advanceDays(1)">📅 日付を +1日 進める</button>
+        <button class="sim-btn" onclick="advanceMonth()">🌙 来月へ進める（月跨ぎ）</button>
+        <button class="sim-btn" onclick="resetVirtualDate()">🔄 今日の日付に戻す</button>
+        <button class="sim-btn danger" onclick="resetAllData()">🗑️ 全データを初期化</button>
+      </div>
+    </div>
+
+    <!-- チケット一覧 -->
+    <div class="section-title">
+      <span>今月使えるチケット</span>
+      <span id="remainingSummary" style="font-size:12px; font-weight:600;"></span>
+    </div>
+
+    <div id="ticketContainer"></div>
+
+    <!-- 運動カウンター -->
+    <div class="section-title">
+      <span>運動カウンター</span>
+    </div>
+
+    <div class="workout-card">
+      <div class="workout-header">
+        <div>
+          <div style="font-size:16px; font-weight:700;">運動5回でスイーツ＋1枚</div>
+          <div style="font-size:12px; color:var(--subtext);">獲得したスイーツチケットは翌月も繰り越しOK</div>
+        </div>
+        <div class="workout-counter-badge" id="workoutCounterBadge">0 個</div>
+      </div>
+
+      <div class="stamp-row" id="stampRow"></div>
+
+      <button class="workout-btn" id="workoutBtn" onclick="recordWorkout()">
+        💪 運動を1回カウントする
+      </button>
+      <div class="workout-note" id="workoutNote"></div>
+    </div>
+
+    <!-- 使用・獲得履歴 -->
+    <div class="panel">
+      <h3>🕒 最近の履歴</h3>
+      <ul class="history-list" id="historyList"></ul>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const STORAGE_KEY = 'meal_ticket_app_v1';
+
+    // デフォルト状態
+    function createInitialState(nowStr, monthStr) {
+      return {
+        lastActiveMonth: monthStr,       // YYYY-MM
+        cheatTickets: 1,                 // 月1枚（繰越不可）
+        sweetMonthlyTickets: 4,          // 月4枚（繰越不可）
+        sweetCarryoverTickets: 0,        // 運動ボーナス分（繰越可）
+        sideTickets: 4,                  // おかず月4枚（繰越不可）
+        workoutProgress: 0,              // 0〜4（5でカウンター+1）
+        workoutCounterTotal: 0,          // 累計運動カウンター個数
+        lastCounterIncrementDate: null,  // YYYY-MM-DD（1日1個上限管理用）
+        virtualOffsetDays: 0,            // シミュレーター用オフセット日数
+        virtualOffsetMonths: 0,          // シミュレーター用オフセット月数
+        history: []
+      };
+    }
+
+    let state = loadState();
+
+    // 現在の日付オブジェクト（シミュレーター対応）
+    function getVirtualNow() {
+      const d = new Date();
+      if (state && state.virtualOffsetMonths) {
+        d.setMonth(d.getMonth() + state.virtualOffsetMonths);
+      }
+      if (state && state.virtualOffsetDays) {
+        d.setDate(d.getDate() + state.virtualOffsetDays);
+      }
+      return d;
+    }
+
+    function formatDate(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function formatMonth(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      return `${y}-${m}`;
+    }
+
+    function loadState() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const now = new Date();
+      if (!raw) {
+        const init = createInitialState(formatDate(now), formatMonth(now));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(init));
+        return init;
+      }
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        return createInitialState(formatDate(now), formatMonth(now));
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    // 月跨ぎ判定（月が変わっていたら基本チケットをリセット＆ボーナスチケットは維持）
+    function checkMonthlyReset() {
+      const now = getVirtualNow();
+      const currentMonth = formatMonth(now);
+
+      if (state.lastActiveMonth !== currentMonth) {
+        state.cheatTickets = 1;
+        state.sweetMonthlyTickets = 4;
+        state.sideTickets = 4;
+        // sweetCarryoverTickets（運動で増えたチケット）はそのまま繰り越し
+        state.lastActiveMonth = currentMonth;
+        addHistory(`🌙 ${now.getMonth() + 1}月になりチケットが復活しました！`);
+        saveState();
+        showToast(`${now.getMonth() + 1}月のチケットが復活しました✨`);
+      }
+    }
+
+    function addHistory(text) {
+      const now = getVirtualNow();
+      const timeStr = `${now.getMonth() + 1}/${now.getDate()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      state.history.unshift({ time: timeStr, text });
+      if (state.history.length > 30) {
+        state.history.pop();
+      }
+    }
+
+    // チケット消費処理
+    function useTicket(type) {
+      checkMonthlyReset();
+
+      if (type === 'cheat') {
+        if (state.cheatTickets <= 0) return;
+        if (!confirm('チートデイのチケットを使用しますか？\n（今月はもう表示されなくなります）')) return;
+        state.cheatTickets -= 1;
+        addHistory('🍕 チートデイのチケットを使用しました');
+        showToast('チートデイチケットを使用しました！最高の一日に！🎉');
+      } else if (type === 'sweet') {
+        const totalSweet = state.sweetMonthlyTickets + state.sweetCarryoverTickets;
+        if (totalSweet <= 0) return;
+        if (!confirm('スイーツチケットを1枚使用しますか？')) return;
+
+        // 繰り越し不可の「今月分」から優先して消費する
+        if (state.sweetMonthlyTickets > 0) {
+          state.sweetMonthlyTickets -= 1;
+          addHistory('🍰 スイーツチケット（今月枠）を1枚使用');
+        } else {
+          state.sweetCarryoverTickets -= 1;
+          addHistory('🍰 スイーツチケット（運動繰越枠）を1枚使用');
+        }
+        showToast('スイーツチケットを使用しました🍰');
+      } else if (type === 'side') {
+        if (state.sideTickets <= 0) return;
+        if (!confirm('おかずチケットを1枚使用しますか？')) return;
+        state.sideTickets -= 1;
+        addHistory('🍗 おかずチケットを1枚使用');
+        showToast('おかずチケットを使用しました🍗');
+      }
+
+      saveState();
+      render();
+    }
+
+    // 運動記録処理
+    function recordWorkout() {
+      checkMonthlyReset();
+      const todayStr = formatDate(getVirtualNow());
+
+      // すでに今日、運動カウンターが1個増えている場合、5回目の達成をブロック
+      const alreadyIncrementedToday = (state.lastCounterIncrementDate === todayStr);
+      if (alreadyIncrementedToday && state.workoutProgress >= 4) {
+        showToast('運動カウンターは1日1個までしか増えません🙏');
+        return;
+      }
+
+      state.workoutProgress += 1;
+
+      if (state.workoutProgress >= 5) {
+        state.workoutProgress = 0;
+        state.workoutCounterTotal += 1;
+        state.sweetCarryoverTickets += 1;
+        state.lastCounterIncrementDate = todayStr;
+        addHistory('🏆 運動5回達成！カウンター+1 ＆ スイーツチケット+1枚獲得');
+        showToast('🎉 運動5回達成！スイーツチケットを1枚獲得しました！');
+      } else {
+        addHistory(`💪 運動を記録（${state.workoutProgress}/5）`);
+        showToast(`運動カウント +1！（あと${5 - state.workoutProgress}回でチケット獲得）`);
+      }
+
+      saveState();
+      render();
+    }
+
+    // 画面描画
+    function render() {
+      checkMonthlyReset();
+      const now = getVirtualNow();
+
+      // ヘッダー日付表示
+      const isSimulated = state.virtualOffsetDays !== 0 || state.virtualOffsetMonths !== 0;
+      document.getElementById('currentDateText').textContent =
+        `${now.getFullYear()}年${now.getMonth() + 1}月${now.getDate()}日` + (isSimulated ? ' (テスト中)' : '');
+
+      // チケット描画（残数0のチケットは非表示）
+      const container = document.getElementById('ticketContainer');
+      container.innerHTML = '';
+
+      const totalSweet = state.sweetMonthlyTickets + state.sweetCarryoverTickets;
+      let visibleCount = 0;
+
+      // 1. チートデイのチケット
+      if (state.cheatTickets > 0) {
+        visibleCount++;
+        container.innerHTML += `
+          <div class="ticket ticket-cheat">
+            <div class="ticket-left">
+              <div class="ticket-emoji">🍕</div>
+              <div class="ticket-count-num">${state.cheatTickets}</div>
+              <div class="ticket-count-unit">枚</div>
+            </div>
+            <div class="ticket-divider"></div>
+            <div class="ticket-right">
+              <div>
+                <h2 class="ticket-title">チートデイのチケット</h2>
+                <p class="ticket-desc">好きなものをたくさん食べる日に使用。使うと今月は非表示になり、来月1枚復活します。</p>
+                <div class="ticket-tags">
+                  <span class="tag">月1回限定</span>
+                  <span class="tag">翌月リセット</span>
+                </div>
+              </div>
+              <button class="use-btn" onclick="useTicket('cheat')">チケットを使う</button>
+            </div>
+          </div>
+        `;
+      }
+
+      // 2. スイーツチケット（今月分 + 運動ボーナス分）
+      if (totalSweet > 0) {
+        visibleCount++;
+        container.innerHTML += `
+          <div class="ticket ticket-sweet">
+            <div class="ticket-left">
+              <div class="ticket-emoji">🍰</div>
+              <div class="ticket-count-num">${totalSweet}</div>
+              <div class="ticket-count-unit">枚</div>
+            </div>
+            <div class="ticket-divider"></div>
+            <div class="ticket-right">
+              <div>
+                <h2 class="ticket-title">スイーツチケット</h2>
+                <p class="ticket-desc">1枚につき1つのスイーツを購入可能。今月枠から優先消費され、運動獲得分は翌月へ繰り越せます。</p>
+                <div class="ticket-tags">
+                  <span class="tag">今月枠: ${state.sweetMonthlyTickets}枚</span>
+                  <span class="tag tag-carryover">運動ボーナス(繰越可): ${state.sweetCarryoverTickets}枚</span>
+                </div>
+              </div>
+              <button class="use-btn" onclick="useTicket('sweet')">1枚使う</button>
+            </div>
+          </div>
+        `;
+      }
+
+      // 3. おかずチケット
+      if (state.sideTickets > 0) {
+        visibleCount++;
+        container.innerHTML += `
+          <div class="ticket ticket-side">
+            <div class="ticket-left">
+              <div class="ticket-emoji">🍗</div>
+              <div class="ticket-count-num">${state.sideTickets}</div>
+              <div class="ticket-count-unit">枚</div>
+            </div>
+            <div class="ticket-divider"></div>
+            <div class="ticket-right">
+              <div>
+                <h2 class="ticket-title">おかずチケット</h2>
+                <p class="ticket-desc">1枚につき1つのおかずを購入可能。なくなると今月は非表示になり、来月4枚復活します。</p>
+                <div class="ticket-tags">
+                  <span class="tag">今月残り: ${state.sideTickets} / 4枚</span>
+                  <span class="tag">翌月リセット</span>
+                </div>
+              </div>
+              <button class="use-btn" onclick="useTicket('side')">1枚使う</button>
+            </div>
+          </div>
+        `;
+      }
+
+      if (visibleCount === 0) {
+        container.innerHTML = `
+          <div class="empty-tickets">
+            🎉 今月のチケットはすべて使い切りました！<br>
+            来月になると復活します（または運動5回でスイーツチケットを獲得できます）。
+          </div>
+        `;
+      }
+
+      document.getElementById('remainingSummary').textContent =
+        `表示中: ${visibleCount}種類`;
+
+      // 運動カウンター描画
+      document.getElementById('workoutCounterBadge').textContent =
+        `カウンター ${state.workoutCounterTotal}個`;
+
+      const stampRow = document.getElementById('stampRow');
+      stampRow.innerHTML = '';
+      for (let i = 1; i <= 5; i++) {
+        const isDone = i <= state.workoutProgress;
+        stampRow.innerHTML += `
+          <div class="stamp-slot ${isDone ? 'active' : ''}">
+            <div class="stamp-icon">${isDone ? '🔥' : (i === 5 ? '🍰' : '・')}</div>
+            <div>${i}回目</div>
+          </div>
+        `;
+      }
+
+      // 1日1個制限チェック
+      const todayStr = formatDate(now);
+      const alreadyIncrementedToday = (state.lastCounterIncrementDate === todayStr);
+      const workoutBtn = document.getElementById('workoutBtn');
+      const workoutNote = document.getElementById('workoutNote');
+
+      if (alreadyIncrementedToday && state.workoutProgress >= 4) {
+        workoutBtn.disabled = true;
+        workoutBtn.textContent = '本日のカウンター増加上限（明日5回目を達成可能）';
+        workoutNote.textContent = '※運動カウンターは1日に1個までしか増えないため、5回目は明日以降カウントできます。';
+      } else {
+        workoutBtn.disabled = false;
+        workoutBtn.textContent = '💪 運動を1回カウントする';
+        workoutNote.textContent = alreadyIncrementedToday
+          ? '✅ 本日すでにカウンターが1個増えています（4回目までカウント可能）'
+          : `あと ${5 - state.workoutProgress} 回の運動でカウンター＋1個 ＆ スイーツチケット＋1枚！`;
+      }
+
+      // 履歴描画
+      const historyList = document.getElementById('historyList');
+      if (state.history.length === 0) {
+        historyList.innerHTML = '<li style="color:var(--subtext);">まだ履歴はありません</li>';
+      } else {
+        historyList.innerHTML = state.history.map(item => `
+          <li>
+            <span>${item.text}</span>
+            <span style="color:var(--subtext); font-size:11px; margin-left:8px; white-space:nowrap;">${item.time}</span>
+          </li>
+        `).join('');
+      }
+    }
+
+    // シミュレーター用関数
+    function advanceDays(days) {
+      state.virtualOffsetDays += days;
+      saveState();
+      render();
+      showToast(`日付を +${days}日 進めました`);
+    }
+
+    function advanceMonth() {
+      state.virtualOffsetMonths += 1;
+      state.virtualOffsetDays = 0;
+      saveState();
+      render();
+    }
+
+    function resetVirtualDate() {
+      state.virtualOffsetDays = 0;
+      state.virtualOffsetMonths = 0;
+      const now = new Date();
+      state.lastActiveMonth = formatMonth(now);
+      saveState();
+      render();
+      showToast('今日の日付に戻しました');
+    }
+
+    function resetAllData() {
+      if (!confirm('すべてのチケット・運動カウント履歴を初期状態にリセットしますか？')) return;
+      const now = new Date();
+      state = createInitialState(formatDate(now), formatMonth(now));
+      saveState();
+      render();
+      showToast('全データを初期化しました');
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        t.classList.remove('show');
+      }, 2600);
+    }
+
+    document.getElementById('toggleSimBtn').addEventListener('click', () => {
+      document.getElementById('simPanel').classList.toggle('hidden');
+    });
+
+    // 初回描画
+    render();
+  </script>
+</body>
+</html>
